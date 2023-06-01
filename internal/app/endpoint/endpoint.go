@@ -22,13 +22,20 @@ func New(serv *service.Service, repo *repository.Repository) *Endpoint {
 	}
 }
 func (e *Endpoint) Init(bot *tele.Group, manager *fsm.Manager) {
-	bot.Handle("/start", e.onStart)
-	manager.Bind("/state", fsm.AnyState, func(c tele.Context, state fsm.FSMContext) error {
-		return c.Send(state.State().String())
-	})
+	bot.Handle("/start", e.start)
+	manager.Bind("/state", fsm.AnyState, e.state)
+	manager.Bind(&keyboards.BtnCancel, fsm.AnyState, e.cancel)
 	e.initSamuraiEndpoints(manager)
+	e.initDaimyoEndpoints(manager)
 }
 
-func (e *Endpoint) onStart(c tele.Context) error {
+func (e *Endpoint) start(c tele.Context) error {
 	return c.Send("Выберите", keyboards.Default())
+}
+func (e *Endpoint) cancel(c tele.Context, state fsm.FSMContext) error {
+	state.Set(fsm.DefaultState)
+	return c.Send("Выберите", keyboards.Default())
+}
+func (e *Endpoint) state(c tele.Context, state fsm.FSMContext) error {
+	return c.Send(state.State().String())
 }

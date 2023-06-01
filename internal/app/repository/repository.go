@@ -1,6 +1,9 @@
 package repository
 
-import "database/sql"
+import (
+	"database/sql"
+	"fmt"
+)
 
 type Repository struct {
 	DB *sql.DB
@@ -8,4 +11,18 @@ type Repository struct {
 
 func New(DB *sql.DB) *Repository {
 	return &Repository{DB: DB}
+}
+func (r *Repository) ValidUser(senderID, role string) bool {
+	var temp int
+	stmt := `SELECT COUNT(*) FROM ` + role + ` WHERE TelegramUsername=?`
+	row := r.DB.QueryRow(stmt, senderID)
+	err := row.Scan(&temp)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	if temp == 0 {
+		return false
+	}
+	return true
 }

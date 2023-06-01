@@ -9,14 +9,14 @@ var (
 	BtnSber             = tele.Btn{Text: "Сбер"}
 )
 
-func SamuraiKB() *tele.ReplyMarkup {
+func Samurai() *tele.ReplyMarkup {
 	samuraiMenu.Reply(
 		samuraiMenu.Row(BtnSamuraiEnterInfo),
 		samuraiMenu.Row(BtnCancel))
 	return samuraiMenu
 }
 
-func SamuraiChoseBankKB() *tele.ReplyMarkup {
+func SamuraiChoseBank() *tele.ReplyMarkup {
 	samuraiMenu.Reply(
 		samuraiMenu.Row(BtnTinkoff),
 		samuraiMenu.Row(BtnSber),

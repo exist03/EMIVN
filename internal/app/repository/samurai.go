@@ -2,7 +2,6 @@ package repository
 
 import (
 	"emivn/internal/models"
-	"fmt"
 	"log"
 )
 
@@ -73,17 +72,29 @@ func (r *Repository) SamuraiSetTurnover(id string, amount float64, date, bank st
 	return nil
 }
 
-func (r *Repository) SamuraiValid(senderID string) bool {
-	var temp int
-	stmt := `SELECT COUNT(*) FROM Samurai WHERE TelegramUsername=?`
-	row := r.DB.QueryRow(stmt, senderID)
-	err := row.Scan(&temp)
-	if err != nil {
-		fmt.Println(err)
-		return false
-	}
-	if temp == 0 {
-		return false
-	}
-	return true
-}
+//func (m *SamuraiModel) GetList(nickname interface{}) ([]string, error) {
+//	stmt := `SELECT Owner, Nickname, TelegramUsername FROM Samurai WHERE Owner = ?`
+//
+//	rows, err := m.DB.Query(stmt, nickname)
+//	if err != nil {
+//		log.Print(err)
+//		return nil, err
+//	}
+//	defer rows.Close()
+//
+//	var result []string
+//
+//	for rows.Next() {
+//		s := &users.Samurai{}
+//		err = rows.Scan(&s.Owner, &s.Nickname, &s.TelegramUsername)
+//		if err != nil {
+//			return nil, err
+//		}
+//		result = append(result, fmt.Sprintf("%s", s))
+//	}
+//
+//	if err = rows.Err(); err != nil {
+//		return nil, err
+//	}
+//	return result, nil
+//}
