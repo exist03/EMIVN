@@ -11,6 +11,9 @@ var (
 	BtnAskReplenishment = tele.Btn{Text: "Запросить пополнение"}
 	BtnCreateSamurai    = tele.Btn{Text: "Создать самурая"}
 	BtnSubordinates     = tele.Btn{Text: "Список подчиненных"}
+	BtnEnterInfoShift   = tele.Btn{Text: "Ввести данные за смену"}
+	BtnShift            = tele.Btn{Text: "За смену"}
+	BtnPeriod           = tele.Btn{Text: "За период"}
 )
 
 func Daimyo() *tele.ReplyMarkup {
@@ -29,6 +32,22 @@ func DaimyoHierarchy() *tele.ReplyMarkup {
 	daimyoMenu.Reply(
 		daimyoMenu.Row(BtnCreateSamurai),
 		daimyoMenu.Row(BtnSubordinates),
+		daimyoMenu.Row(BtnCancel),
+	)
+	return daimyoMenu
+}
+func DaimyoReport() *tele.ReplyMarkup {
+	daimyoMenu.Reply(
+		daimyoMenu.Row(BtnEnterInfoShift),
+		daimyoMenu.Row(BtnReport),
+		daimyoMenu.Row(BtnCancel),
+	)
+	return daimyoMenu
+}
+func DaimyoReportPeriod() *tele.ReplyMarkup {
+	daimyoMenu.Reply(
+		daimyoMenu.Row(BtnShift),
+		daimyoMenu.Row(BtnPeriod),
 		daimyoMenu.Row(BtnCancel),
 	)
 	return daimyoMenu

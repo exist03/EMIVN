@@ -5,6 +5,11 @@ import (
 	"fmt"
 )
 
+type Banks struct {
+	Sber    float64
+	Tinkoff float64
+}
+
 type Repository struct {
 	DB *sql.DB
 }
