@@ -69,3 +69,127 @@ func (r *Repository) DaimyoGetSamuraiAmountList(daimyo string) (map[string]Banks
 	}
 	return myMap, nil
 }
+func (r *Repository) DaimyoGetReportByPeriod(daimyo string, dateBegin, dateEnd time.Time) (map[string]InfoPeriod, error) {
+	myMap := make(map[string]InfoPeriod)
+	stmtTink := `SELECT SamuraiUsername, TurnoverEnd.Amount
+	FROM SamuraiTurnover
+	JOIN Samurai S ON SamuraiTurnover.SamuraiUsername = S.TelegramUsername
+	WHERE S.owner=? AND Bank="тинькофф" AND Date=?`
+	stmtSber := `SELECT SamuraiUsername, TurnoverEnd.Amount
+	FROM SamuraiTurnover
+	JOIN Samurai S ON SamuraiTurnover.SamuraiUsername = S.TelegramUsername
+	WHERE S.owner=? AND Bank="сбер" AND Date=?`
+	rows, err := r.DB.Query(stmtTink, daimyo, dateBegin)
+	if err != nil {
+		log.Print(err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var samurai string
+		var amount float64
+		err = rows.Scan(&samurai, &amount)
+		if err != nil {
+			return nil, err
+		}
+		if str, ok := myMap[samurai]; ok {
+			str.begin = amount
+			myMap[samurai] = str
+		} else {
+			s := InfoPeriod{
+				begin: amount,
+			}
+			myMap[samurai] = s
+		}
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	rowsSber, err := r.DB.Query(stmtSber, daimyo, dateBegin)
+	if err != nil {
+		log.Print(err)
+		return nil, err
+	}
+	defer rowsSber.Close()
+
+	for rowsSber.Next() {
+		var samurai string
+		var amount float64
+		err = rowsSber.Scan(&samurai, &amount)
+		if err != nil {
+			return nil, err
+		}
+		if str, ok := myMap[samurai]; ok {
+			str.begin += amount
+			myMap[samurai] = str
+		} else {
+			s := InfoPeriod{
+				begin: amount,
+			}
+			myMap[samurai] = s
+		}
+	}
+	if err = rowsSber.Err(); err != nil {
+		return nil, err
+	}
+
+	rowsTinkEnd, err := r.DB.Query(stmtTink, daimyo, dateEnd)
+	if err != nil {
+		log.Print(err)
+		return nil, err
+	}
+	defer rowsTinkEnd.Close()
+
+	for rowsTinkEnd.Next() {
+		var samurai string
+		var amount float64
+		err = rowsTinkEnd.Scan(&samurai, &amount)
+		if err != nil {
+			return nil, err
+		}
+		if str, ok := myMap[samurai]; ok {
+			str.end = amount
+			myMap[samurai] = str
+		} else {
+			s := InfoPeriod{
+				end: amount,
+			}
+			myMap[samurai] = s
+		}
+	}
+	if err = rowsTinkEnd.Err(); err != nil {
+		return nil, err
+	}
+
+	rowsSberEnd, err := r.DB.Query(stmtSber, daimyo, dateEnd)
+	if err != nil {
+		log.Print(err)
+		return nil, err
+	}
+	defer rowsSberEnd.Close()
+
+	for rowsSberEnd.Next() {
+		var samurai string
+		var amount float64
+		err = rowsSberEnd.Scan(&samurai, &amount)
+		if err != nil {
+			return nil, err
+		}
+		if str, ok := myMap[samurai]; ok {
+			str.end += amount
+			myMap[samurai] = str
+		} else {
+			s := InfoPeriod{
+				end: amount,
+			}
+			myMap[samurai] = s
+		}
+	}
+	if err = rowsSberEnd.Err(); err != nil {
+		return nil, err
+	}
+
+	return myMap, err
+}

@@ -144,5 +144,20 @@ func (e *Endpoint) daimyoReportReportPeriodEndInput(c tele.Context, state fsm.FS
 	}
 	tmp := state.MustGet("beginDate")
 	beginDate, _ := time.Parse(tmp.(string), "2006-01-02")
-
+	mapRes, err := e.serv.Repo.DaimyoGetReportByPeriod(c.Sender().Username, beginDate, endDate)
+	var result float64
+	if err != nil {
+		log.Println(err)
+		return c.Send("Что-то пошло не так повторите попытку")
+	}
+	for _, v := range mapRes {
+		result += v.End - v.Begin
+	}
+	c.Send(fmt.Sprintf("%s\nОборот: %.0f\n0.0015 -> %.0f", c.Sender().Username, result, result*0.0015))
+	for k, v := range mapRes {
+		c.Send(fmt.Sprintf("%s\n"+
+			"%.0f / %.0f ", k, v.Begin, v.End))
+	}
+	state.Set(daimyoBeginState)
+	return c.Send("Конец отчета", keyboards.Daimyo())
 }

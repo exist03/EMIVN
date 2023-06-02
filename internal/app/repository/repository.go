@@ -5,6 +5,11 @@ import (
 	"fmt"
 )
 
+type InfoPeriod struct {
+	Begin float64
+	End   float64
+}
+
 type Banks struct {
 	Sber    float64
 	Tinkoff float64
