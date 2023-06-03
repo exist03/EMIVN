@@ -14,7 +14,7 @@ func (r *Repository) SamuraiInsert(samurai models.Samurai) error {
 	return nil
 }
 
-func (r *Repository) SamuraiGetListByOwner(nickname interface{}) ([]models.Samurai, error) {
+func (r *Repository) SamuraiGetListByOwner(nickname string) ([]models.Samurai, error) {
 	stmt := `SELECT Owner, Nickname, TelegramUsername FROM Samurai WHERE Owner = ?`
 
 	rows, err := r.DB.Query(stmt, nickname)
@@ -41,7 +41,7 @@ func (r *Repository) SamuraiGetListByOwner(nickname interface{}) ([]models.Samur
 	return result, nil
 }
 
-func (r *Repository) SamuraiSetOwner(ID interface{}, owner string) error {
+func (r *Repository) SamuraiSetOwner(ID any, owner string) error {
 	stmt := `UPDATE Samurai SET Owner=? WHERE TelegramUsername=?`
 	_, err := r.DB.Exec(stmt, owner, ID)
 	if err != nil {

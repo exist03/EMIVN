@@ -39,6 +39,8 @@ func (e *Endpoint) initDaimyoEndpoints(manager *fsm.Manager) {
 	manager.Bind(&keyboards.BtnPeriod, daimyoReportChosePeriodState, e.daimyoReportReportPeriodStart)
 	manager.Bind(tele.OnText, daimyoReportForPeriodState, e.daimyoReportReportPeriodStartInput)
 	manager.Bind(tele.OnText, daimyoReportPeriodEndState, e.daimyoReportReportPeriodEndInput)
+	//card limit
+	manager.Bind(&keyboards.BtnCardLimit, daimyoBeginState, e.daimyoCardLimit)
 
 }
 func (e *Endpoint) daimyo(c tele.Context, state fsm.FSMContext) error {
@@ -162,4 +164,17 @@ func (e *Endpoint) daimyoReportReportPeriodEndInput(c tele.Context, state fsm.FS
 	}
 	state.Set(daimyoBeginState)
 	return c.Send("Конец отчета", keyboards.Daimyo())
+}
+
+// card limit
+func (e *Endpoint) daimyoCardLimit(c tele.Context, state fsm.FSMContext) error {
+	cards, err := e.serv.Repo.CardGetListByOwner(c.Sender().Username)
+	if err != nil {
+		log.Println(err)
+		return c.Send("Что-то пошло не так")
+	}
+	for _, v := range cards {
+		c.Send(fmt.Sprintf("%s - %d", v.ID, v.Limit))
+	}
+	return nil
 }
