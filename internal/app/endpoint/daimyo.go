@@ -37,8 +37,8 @@ func (e *Endpoint) initDaimyoEndpoints(manager *fsm.Manager) {
 	manager.Bind(&keyboards.BtnReport, daimyoReportState, e.daimyoReportReport)
 	manager.Bind(&keyboards.BtnShift, daimyoReportChosePeriodState, e.daimyoReportReportShift)
 	manager.Bind(&keyboards.BtnPeriod, daimyoReportChosePeriodState, e.daimyoReportReportPeriodStart)
-	manager.Bind(&keyboards.BtnPeriod, daimyoReportForPeriodState, e.daimyoReportReportPeriodStartInput)
-	manager.Bind(&keyboards.BtnPeriod, daimyoReportPeriodEndState, e.daimyoReportReportPeriodEndInput)
+	manager.Bind(tele.OnText, daimyoReportForPeriodState, e.daimyoReportReportPeriodStartInput)
+	manager.Bind(tele.OnText, daimyoReportPeriodEndState, e.daimyoReportReportPeriodEndInput)
 
 }
 func (e *Endpoint) daimyo(c tele.Context, state fsm.FSMContext) error {
@@ -138,9 +138,11 @@ func (e *Endpoint) daimyoReportReportPeriodStartInput(c tele.Context, state fsm.
 	return c.Send("Введите дату конца периода включительно")
 }
 func (e *Endpoint) daimyoReportReportPeriodEndInput(c tele.Context, state fsm.FSMContext) error {
-	endDate, err := time.Parse(c.Text(), "2006-01-02")
+	endDate, err := time.Parse("2006-01-02", c.Text())
 	if err != nil {
+		log.Println(err)
 		c.Send("Некорретный ввод, попробуйте еще раз")
+		return err
 	}
 	tmp := state.MustGet("beginDate")
 	beginDate, _ := time.Parse(tmp.(string), "2006-01-02")

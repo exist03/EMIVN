@@ -71,11 +71,11 @@ func (r *Repository) DaimyoGetSamuraiAmountList(daimyo string) (map[string]Banks
 }
 func (r *Repository) DaimyoGetReportByPeriod(daimyo string, dateBegin, dateEnd time.Time) (map[string]InfoPeriod, error) {
 	myMap := make(map[string]InfoPeriod)
-	stmtTink := `SELECT SamuraiUsername, TurnoverEnd.Amount
+	stmtTink := `SELECT SamuraiUsername, Amount
 	FROM SamuraiTurnover
 	JOIN Samurai S ON SamuraiTurnover.SamuraiUsername = S.TelegramUsername
 	WHERE S.owner=? AND Bank="тинькофф" AND Date=?`
-	stmtSber := `SELECT SamuraiUsername, TurnoverEnd.Amount
+	stmtSber := `SELECT SamuraiUsername, Amount
 	FROM SamuraiTurnover
 	JOIN Samurai S ON SamuraiTurnover.SamuraiUsername = S.TelegramUsername
 	WHERE S.owner=? AND Bank="сбер" AND Date=?`
@@ -94,11 +94,11 @@ func (r *Repository) DaimyoGetReportByPeriod(daimyo string, dateBegin, dateEnd t
 			return nil, err
 		}
 		if str, ok := myMap[samurai]; ok {
-			str.begin = amount
+			str.Begin = amount
 			myMap[samurai] = str
 		} else {
 			s := InfoPeriod{
-				begin: amount,
+				Begin: amount,
 			}
 			myMap[samurai] = s
 		}
@@ -122,11 +122,11 @@ func (r *Repository) DaimyoGetReportByPeriod(daimyo string, dateBegin, dateEnd t
 			return nil, err
 		}
 		if str, ok := myMap[samurai]; ok {
-			str.begin += amount
+			str.Begin += amount
 			myMap[samurai] = str
 		} else {
 			s := InfoPeriod{
-				begin: amount,
+				Begin: amount,
 			}
 			myMap[samurai] = s
 		}
@@ -150,11 +150,11 @@ func (r *Repository) DaimyoGetReportByPeriod(daimyo string, dateBegin, dateEnd t
 			return nil, err
 		}
 		if str, ok := myMap[samurai]; ok {
-			str.end = amount
+			str.End = amount
 			myMap[samurai] = str
 		} else {
 			s := InfoPeriod{
-				end: amount,
+				End: amount,
 			}
 			myMap[samurai] = s
 		}
@@ -178,11 +178,11 @@ func (r *Repository) DaimyoGetReportByPeriod(daimyo string, dateBegin, dateEnd t
 			return nil, err
 		}
 		if str, ok := myMap[samurai]; ok {
-			str.end += amount
+			str.End += amount
 			myMap[samurai] = str
 		} else {
 			s := InfoPeriod{
-				end: amount,
+				End: amount,
 			}
 			myMap[samurai] = s
 		}
