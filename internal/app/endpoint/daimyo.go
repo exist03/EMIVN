@@ -7,6 +7,7 @@ import (
 	fsm "github.com/vitaliy-ukiru/fsm-telebot"
 	tele "gopkg.in/telebot.v3"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -17,11 +18,13 @@ var (
 	daimyoSamuraiNicknameState = inputSG.New("daimyoSamuraiNicknameState")
 	daimyoSamuraiUsernameState = inputSG.New("daimyoSamuraiUsernameState")
 	//report
-	daimyoReportState            = inputSG.New("daimyoReportState")
-	daimyoReportReportState      = inputSG.New("daimyoReportReportState")
-	daimyoReportChosePeriodState = inputSG.New("daimyoReportChosePeriodState")
-	daimyoReportForPeriodState   = inputSG.New("daimyoReportForPeriodState")
-	daimyoReportPeriodEndState   = inputSG.New("daimyoReportPeriodEndState")
+	daimyoReportState                 = inputSG.New("daimyoReportState")
+	daimyoReportReportState           = inputSG.New("daimyoReportReportState")
+	daimyoReportChosePeriodState      = inputSG.New("daimyoReportChosePeriodState")
+	daimyoReportForPeriodState        = inputSG.New("daimyoReportForPeriodState")
+	daimyoReportPeriodEndState        = inputSG.New("daimyoReportPeriodEndState")
+	daimyoReportEnterInfoChoseCard    = inputSG.New("daimyoReportEnterInfoChoseCard")
+	daimyoReportEnterInfoEnterBalance = inputSG.New("daimyoReportEnterInfoEnterBalance")
 )
 
 func (e *Endpoint) initDaimyoEndpoints(manager *fsm.Manager) {
@@ -39,6 +42,9 @@ func (e *Endpoint) initDaimyoEndpoints(manager *fsm.Manager) {
 	manager.Bind(&keyboards.BtnPeriod, daimyoReportChosePeriodState, e.daimyoReportReportPeriodStart)
 	manager.Bind(tele.OnText, daimyoReportForPeriodState, e.daimyoReportReportPeriodStartInput)
 	manager.Bind(tele.OnText, daimyoReportPeriodEndState, e.daimyoReportReportPeriodEndInput)
+	manager.Bind(&keyboards.BtnEnterInfoShift, daimyoReportState, e.daimyoReportEnterInfo)
+	manager.Bind(tele.OnText, daimyoReportEnterInfoChoseCard, e.daimyoReportEnterInfoChoseCard)
+	manager.Bind(tele.OnText, daimyoReportEnterInfoEnterBalance, e.daimyoReportEnterInfoFinally)
 	//card limit
 	manager.Bind(&keyboards.BtnCardLimit, daimyoBeginState, e.daimyoCardLimit)
 
@@ -82,8 +88,7 @@ func (e *Endpoint) daimyoCreateSamuraiNickname(c tele.Context, state fsm.FSMCont
 	return c.Send("Выберите тэг")
 }
 func (e *Endpoint) daimyoCreateSamuraiUsername(c tele.Context, state fsm.FSMContext) error {
-	nickname := state.MustGet("nickname")
-	nick := nickname.(string)
+	nick := state.MustGet("nickname").(string)
 	username := c.Text()
 	s := models.Samurai{
 		Username: username,
@@ -143,11 +148,12 @@ func (e *Endpoint) daimyoReportReportPeriodEndInput(c tele.Context, state fsm.FS
 	endDate, err := time.Parse("2006-01-02", c.Text())
 	if err != nil {
 		log.Println(err)
-		c.Send("Некорретный ввод, попробуйте еще раз")
+		state.Set(daimyoReportForPeriodState)
+		c.Send("Некорретный ввод, попробуйте еще раз\nВведите дату начала периода")
 		return err
 	}
 	tmp := state.MustGet("beginDate")
-	beginDate, _ := time.Parse(tmp.(string), "2006-01-02")
+	beginDate, _ := time.Parse("2006-01-02", tmp.(string))
 	mapRes, err := e.serv.Repo.DaimyoGetReportByPeriod(c.Sender().Username, beginDate, endDate)
 	var result float64
 	if err != nil {
@@ -164,6 +170,35 @@ func (e *Endpoint) daimyoReportReportPeriodEndInput(c tele.Context, state fsm.FS
 	}
 	state.Set(daimyoBeginState)
 	return c.Send("Конец отчета", keyboards.Daimyo())
+}
+func (e *Endpoint) daimyoReportEnterInfo(c tele.Context, state fsm.FSMContext) error {
+	cards, err := e.serv.Repo.CardGetListByOwner(c.Sender().Username)
+	if err != nil {
+		log.Println(err)
+		return c.Send("Что-то пошло не так")
+	}
+	state.Set(daimyoReportEnterInfoChoseCard)
+	return c.Send("Выберите", keyboards.CardList(cards))
+}
+func (e *Endpoint) daimyoReportEnterInfoChoseCard(c tele.Context, state fsm.FSMContext) error {
+	state.Update("cardID", c.Text())
+	state.Set(daimyoReportEnterInfoEnterBalance)
+	return c.Send("Введите остаток баланса карты на 8:00")
+}
+func (e *Endpoint) daimyoReportEnterInfoFinally(c tele.Context, state fsm.FSMContext) error {
+	card := state.MustGet("cardID").(string)
+	amount, err := strconv.Atoi(c.Text())
+	if err != nil {
+		return c.Send("Некорректное значение. Попробуйте еще раз")
+	}
+	err = e.serv.Repo.CardUpdateBalance(card, amount)
+	if err != nil {
+		log.Println(err)
+		state.Set(daimyoBeginState)
+		return c.Send("Возникла ошибка", keyboards.Daimyo())
+	}
+	state.Set(daimyoBeginState)
+	return c.Send("Данные записаны", keyboards.Daimyo())
 }
 
 // card limit
