@@ -62,3 +62,27 @@ func (r *Repository) CardUpdateBalance(cardID string, balance int) error {
 	}
 	return nil
 }
+func (r *Repository) CardInDispute(cardID string) bool {
+	var inDispute bool
+	result := r.DB.QueryRow("SELECT InDispute FROM Card WHERE ID=?", cardID)
+	result.Scan(&inDispute)
+	return inDispute
+}
+func (r *Repository) CardGetByID(cardID string) (models.Card, error) {
+	card := models.Card{ID: cardID}
+	stmt := "SELECT BankInfo, LimitInfo, InDispute, BalanceInfo, Owner FROM Card WHERE ID=?"
+	row := r.DB.QueryRow(stmt, cardID)
+	err := row.Scan(&card.Bank, &card.Limit, &card.InDispute, &card.Balance, &card.Owner)
+	if err != nil {
+		return models.Card{}, err
+	}
+	return card, nil
+}
+func (r *Repository) CardSetDisputeTrue(cardID string) error {
+	stmt := "UPDATE Card SET InDispute=1 WHERE ID=?"
+	_, err := r.DB.Exec(stmt, cardID)
+	if err != nil {
+		return err
+	}
+	return nil
+}

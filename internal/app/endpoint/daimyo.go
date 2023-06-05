@@ -8,6 +8,7 @@ import (
 	tele "gopkg.in/telebot.v3"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -19,12 +20,16 @@ var (
 	daimyoSamuraiUsernameState = inputSG.New("daimyoSamuraiUsernameState")
 	//report
 	daimyoReportState                 = inputSG.New("daimyoReportState")
-	daimyoReportReportState           = inputSG.New("daimyoReportReportState")
 	daimyoReportChosePeriodState      = inputSG.New("daimyoReportChosePeriodState")
 	daimyoReportForPeriodState        = inputSG.New("daimyoReportForPeriodState")
 	daimyoReportPeriodEndState        = inputSG.New("daimyoReportPeriodEndState")
 	daimyoReportEnterInfoChoseCard    = inputSG.New("daimyoReportEnterInfoChoseCard")
 	daimyoReportEnterInfoEnterBalance = inputSG.New("daimyoReportEnterInfoEnterBalance")
+	//create application
+	daimyoCreateApplicationChoseCardState   = inputSG.New("daimyoCreateApplicationChoseCardState")
+	daimyoCreateApplicationEnterAmountState = inputSG.New("daimyoCreateApplicationEnterAmountState")
+	//applications
+	daimyoApplicationDisputableCardState = inputSG.New("daimyoApplicationDisputableCardState")
 )
 
 func (e *Endpoint) initDaimyoEndpoints(manager *fsm.Manager) {
@@ -47,6 +52,17 @@ func (e *Endpoint) initDaimyoEndpoints(manager *fsm.Manager) {
 	manager.Bind(tele.OnText, daimyoReportEnterInfoEnterBalance, e.daimyoReportEnterInfoFinally)
 	//card limit
 	manager.Bind(&keyboards.BtnCardLimit, daimyoBeginState, e.daimyoCardLimit)
+	//create application
+	manager.Bind(&keyboards.BtnAskReplenishment, daimyoBeginState, e.daimyoCreateApplication)
+	manager.Bind(tele.OnText, daimyoCreateApplicationChoseCardState, e.daimyoCreateApplicationChoseCard)
+	manager.Bind(tele.OnText, daimyoCreateApplicationEnterAmountState, e.daimyoCreateApplicationEnterAmount)
+	//Applications
+	manager.Bind(&keyboards.BtnApplications, daimyoBeginState, e.daimyoApplications)
+	manager.Bind(&keyboards.BtnActive, daimyoBeginState, e.daimyoApplicationsActive)
+	manager.Bind(&keyboards.BtnDisputable, daimyoBeginState, e.daimyoApplicationsDisputable)
+	manager.Bind(tele.OnText, daimyoApplicationDisputableCardState, e.daimyoApplicationsDisputableChoseReplenishment)
+	manager.Bind(&keyboards.BtnReplenishedAnother, daimyoApplicationDisputableCardState, nil)
+	manager.Bind(&keyboards.BtnReplenished, daimyoApplicationDisputableCardState, e.daimyoApplicationsDisputableChoseReplenishmentDone)
 
 }
 func (e *Endpoint) daimyo(c tele.Context, state fsm.FSMContext) error {
@@ -212,4 +228,87 @@ func (e *Endpoint) daimyoCardLimit(c tele.Context, state fsm.FSMContext) error {
 		c.Send(fmt.Sprintf("%s - %d", v.ID, v.Limit))
 	}
 	return nil
+}
+
+// create application
+func (e *Endpoint) daimyoCreateApplication(c tele.Context, state fsm.FSMContext) error {
+	cards, err := e.serv.Repo.CardGetListByOwner(c.Sender().Username)
+	if err != nil {
+		log.Println(err)
+		return c.Send("Что-то пошло не так, повториты попытку", keyboards.Daimyo())
+	}
+	state.Set(daimyoCreateApplicationChoseCardState)
+	return c.Send("Выберите карту", keyboards.CardList(cards))
+}
+func (e *Endpoint) daimyoCreateApplicationChoseCard(c tele.Context, state fsm.FSMContext) error {
+	cardID := c.Text()
+	if e.serv.CardInDispute(cardID) {
+		return c.Send("Вы не можете использовать данную карту так как она активна/в споре")
+	}
+	state.Update("cardID", cardID)
+	state.Set(daimyoCreateApplicationEnterAmountState)
+	return c.Send("Введите сумму")
+}
+func (e *Endpoint) daimyoCreateApplicationEnterAmount(c tele.Context, state fsm.FSMContext) error {
+	cardID := state.MustGet("cardID").(string)
+	amount, err := strconv.Atoi(c.Text())
+	if err != nil {
+		return c.Send("Введите корректное значение")
+	}
+	card, err := e.serv.CardGetByID(cardID)
+	if err != nil {
+		log.Println(err)
+		return c.Send("Произошла ошибка\nПопробуйте еще раз")
+	}
+	if amount > card.Limit {
+		return c.Send(fmt.Sprintf("Вы превысили лимит\nОстаток по карте: %d", card.Limit))
+	}
+	err = e.serv.ApplicationCreate(c.Sender().Username, cardID, amount)
+	if err != nil {
+		log.Println(err)
+		state.Set(daimyoBeginState)
+		return c.Send("Возникла ошибка", keyboards.Daimyo())
+	}
+	err = e.serv.CardSetDisputeTrue(cardID)
+	if err != nil {
+		log.Println(err)
+		state.Set(daimyoBeginState)
+		return c.Send("Возникла ошибка", keyboards.Daimyo())
+	}
+	return c.Send("Данные записаны")
+}
+
+// applications
+func (e *Endpoint) daimyoApplications(c tele.Context, state fsm.FSMContext) error {
+	return c.Send("Выберите", keyboards.Applications())
+}
+func (e *Endpoint) daimyoApplicationsActive(c tele.Context, state fsm.FSMContext) error {
+	applications, err := e.serv.ApplicationsGetActive()
+	if err != nil {
+		log.Println(err)
+		return c.Send("Возникла ошибка. Попробуйте позже")
+	}
+	for _, application := range applications {
+		c.Send(fmt.Sprintf("%s / %d", application.CardID, application.Sum))
+	}
+	return nil
+}
+func (e *Endpoint) daimyoApplicationsDisputable(c tele.Context, state fsm.FSMContext) error {
+	applications, err := e.serv.ApplicationsGetDisputable()
+	if err != nil {
+		log.Println(err)
+		return c.Send("Возникла ошибка")
+	}
+	state.Set(daimyoApplicationDisputableCardState)
+	return c.Send("Выберите", keyboards.ApplicationList(applications))
+}
+func (e *Endpoint) daimyoApplicationsDisputableChoseReplenishment(c tele.Context, state fsm.FSMContext) error {
+	before, _, _ := strings.Cut(c.Text(), " ")
+	state.Update("cardID", before)
+	log.Println(before)
+	return c.Send("Выберите", keyboards.ApplicationReplenishment())
+}
+func (e *Endpoint) daimyoApplicationsDisputableChoseReplenishmentDone(c tele.Context, state fsm.FSMContext) error {
+	cardID := state.MustGet("cardID").(string)
+
 }

@@ -25,6 +25,7 @@ func (e *Endpoint) Init(bot *tele.Group, manager *fsm.Manager) {
 	bot.Handle("/start", e.start)
 	manager.Bind("/state", fsm.AnyState, e.state)
 	manager.Bind(&keyboards.BtnCancel, fsm.AnyState, e.cancel)
+	manager.Bind("/cancel", fsm.AnyState, e.cancel)
 	e.initSamuraiEndpoints(manager)
 	e.initDaimyoEndpoints(manager)
 }

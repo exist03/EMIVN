@@ -1,6 +1,8 @@
 package keyboards
 
-import tele "gopkg.in/telebot.v3"
+import (
+	tele "gopkg.in/telebot.v3"
+)
 
 var (
 	defaultMenu     = &tele.ReplyMarkup{ResizeKeyboard: true, RemoveKeyboard: true}
@@ -12,6 +14,8 @@ var (
 	BtnCollector    = tele.Btn{Text: "Инкассатор💵"}
 	BtnController   = tele.Btn{Text: "Контроллер"}
 	BtnCancel       = tele.Btn{Text: "❌ Отмена"}
+	BtnActive       = tele.Btn{Text: "Активные"}
+	BtnDisputable   = tele.Btn{Text: "Спорные"}
 )
 
 func Default() *tele.ReplyMarkup {
